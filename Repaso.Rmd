@@ -5,3 +5,207 @@ date: "2023-11-10"
 output: html_document
 ---
 
+## Bases de Datos: 
+
+```{r}
+library(rio)
+link = "https://github.com/vvvalni/Repaso/raw/main/0.Nacional_Datos-para-el-planeamiento-estrategico_29072021%20(2).xlsx"
+CEPLAN = import(link)
+```
+
+```{r}
+link2 = "https://github.com/vvvalni/Repaso/raw/main/safeCitiesIndexAll.xlsx"
+CITIES = import(link2)
+```
+
+## Preguntas (I):
+
+```{r}
+str(CITIES)
+```
+
+### Pregunta 1:
+
+```{r}
+dontselect=c("city")
+select=setdiff(names(CITIES),dontselect) 
+data1 = CITIES[,select]
+
+# usaremos:
+
+head(data1)
+```
+
+```{r}
+library(polycor)
+corMatrix=polycor::hetcor(data1)$correlations
+```
+
+```{r}
+library(psych)
+psych::KMO(corMatrix) 
+```
+
+```{r}
+cortest.bartlett(corMatrix,n=nrow(data1))$p.value>0.05
+```
+
+```{r}
+library(matrixcalc)
+
+is.singular.matrix(corMatrix)
+```
+
+No, no se puede calcular un indice confiable usando todas esas variables. Esto se debe a que la prueba para comprobar si se trata de una matriz singular sale verdadera. Por lo tanto, se concluye que no se puede construir un índice usando todas las variables, a pesar de que el MSA es mayor a 0.6 y la prueba de identidad es falsa.
+
+### Pregunta 2:
+
+```{r}
+data2 = CITIES[,-c(1,7:9,16:21,27:31,39:50)]
+
+# usaremos:
+
+head(data2)
+```
+
+```{r}
+corMatrix_2=polycor::hetcor(data2)$correlations
+```
+
+```{r}
+psych::KMO(corMatrix_2)
+```
+
+```{r}
+cortest.bartlett(corMatrix_2,n=nrow(data2))$p.value>0.05
+```
+
+```{r}
+is.singular.matrix(corMatrix_2)
+```
+
+No, no se puede calcular un indice confiable usando todas esas variables. Esto se debe a que la prueba para comprobar si se trata de una matriz singular sale verdadera. Por lo tanto, se concluye que no se puede construir un índice usando todas las variables, a pesar de que el MSA es de 0.82 y la prueba de identidad es falsa.
+
+### Pregunta 3:
+
+```{r}
+dataClus=CITIES[,c(2:50)]
+row.names(dataClus)=CITIES$city
+```
+
+#### PAM:
+
+```{r}
+library(factoextra)
+fviz_nbclust(dataClus, pam,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F)
+```
+
+```{r}
+library(cluster)
+g.dist = daisy(dataClus, metric="gower")
+```
+
+```{r}
+library(kableExtra)
+set.seed(123)
+res.pam=pam(g.dist,2,cluster.only = F)
+
+#nueva columna
+dataClus$pam=res.pam$cluster
+
+# ver
+
+head(dataClus,15)%>%kbl()%>%kable_styling()
+```
+
+```{r}
+fviz_silhouette(res.pam,print.summary = F)
+```
+
+#### Estratégica - Aglomerativa
+
+```{r}
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "agnes")
+```
+
+```{r}
+set.seed(123)
+
+res.agnes<- hcut(g.dist, k = 9,hc_func='agnes',hc_method = "ward.D")
+
+dataClus$agnes=res.agnes$cluster
+
+# ver
+
+head(dataClus,15)%>%kbl()%>%kable_styling()
+```
+
+```{r}
+fviz_silhouette(res.agnes,print.summary = F)
+```
+
+```{r}
+fviz_dend(res.agnes, cex = 0.7, horiz = T,main = "")
+```
+
+#### **Estrategia Divisiva**
+
+```{r}
+fviz_nbclust(dataClus, hcut,diss=g.dist,method = "gap_stat",k.max = 10,verbose = F,hc_func = "diana")
+```
+
+```{r}
+set.seed(123)
+res.diana <- hcut(g.dist, k = 2,hc_func='diana')
+dataClus$diana=res.diana$cluster
+# veamos
+head(dataClus,15)%>%kbl%>%kable_styling()
+```
+
+```{r}
+fviz_silhouette(res.diana,print.summary = F)
+```
+
+No, ningún enfoque sugiere 5 clusters.
+
+### Pregunta 4:
+
+#### PAM
+
+Eligiría el enfoque PAM, porque la técnica de partición va a dividir los datos en base al número de grupos que se le pida.
+
+```{r}
+set.seed(123)
+res.pam_2=pam(g.dist,5,cluster.only = F)
+
+#nueva columna
+dataClus$pam_2=res.pam_2$cluster
+
+# ver
+
+head(dataClus,15)%>%kbl()%>%kable_styling()
+```
+
+```{r}
+fviz_silhouette(res.pam_2,print.summary = F)
+```
+
+#### AGNES
+
+```{r}
+res.agnes_2<- hcut(g.dist, k = 5,hc_func='agnes',hc_method = "ward.D")
+```
+
+```{r}
+fviz_silhouette(res.agnes_2,print.summary = F)
+```
+
+#### DIANA
+
+```{r}
+res.diana_2 <- hcut(g.dist, k = 5,hc_func='diana')
+```
+
+```{r}
+fviz_silhouette(res.diana_2,print.summary = F)
+```
