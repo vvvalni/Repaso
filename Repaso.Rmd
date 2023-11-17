@@ -5,7 +5,7 @@ date: "2023-11-10"
 output: html_document
 ---
 
-## Bases de Datos: 
+## Bases de Datos:
 
 ```{r}
 library(rio)
